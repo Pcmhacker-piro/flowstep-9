@@ -327,7 +327,7 @@ function validateGeneratedHtml(text: string) {
  * complete instead of leaving a half-built screen on the canvas.
  */
 async function streamByoScreen(params: {
-  byo: { provider: string; apiKey: string; model: string };
+  byo: { provider: string; apiKey: string; model: string; userId?: string | null };
   system: string;
   userText: string;
   screenId: string;
@@ -405,6 +405,18 @@ async function streamByoScreen(params: {
     if (!truncated) break;
   }
 
+  if (produced) {
+    const { logProviderUsage } = await import("@/lib/usageLog.server");
+    void logProviderUsage({
+      userId: byo.userId ?? null,
+      provider: byo.provider,
+      model: byo.model,
+      source: "design",
+      promptText: `${system}\n${userText}`,
+      outputText: produced,
+    });
+  }
+
   if (!produced) throw new Error(providerError || "Your own provider key returned no design output for this screen.");
   const validationError = validateGeneratedHtml(produced);
   if (validationError) throw new Error(validationError);
@@ -423,7 +435,7 @@ async function streamOneScreen(params: {
   direction: ArtDirection;
   runId: string;
   /** When the signed-in user saved their own provider key, generate with it instead of Lovable credits. */
-  byo?: { provider: string; apiKey: string; model: string } | null;
+  byo?: { provider: string; apiKey: string; model: string; userId?: string | null } | null;
 }) {
   const { key, prompt, screens, screen, images, signal, emit, direction, runId, byo } = params;
   emit({ type: "screen-start", screenId: screen.id });
@@ -556,11 +568,11 @@ export const Route = createFileRoute("/api/generate-image")({
         const { resolveDesignModel, providerForDesignModel } = await import("@/lib/designModels");
         const requestedModel = resolveDesignModel(body.model);
         const wantedProvider = providerForDesignModel(requestedModel);
-        let byo: { provider: string; apiKey: string; model: string } | null = null;
+        let byo: { provider: string; apiKey: string; model: string; userId?: string | null } | null = null;
         if (wantedProvider) {
           try {
             const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
-            const { keys: userKeys } = await resolveUserKeysFromRequest(request);
+            const { userId, keys: userKeys } = await resolveUserKeysFromRequest(request);
             const apiKey = userKeys[wantedProvider];
             if (!apiKey) {
               return new Response(
@@ -568,7 +580,7 @@ export const Route = createFileRoute("/api/generate-image")({
                 { status: 400 },
               );
             }
-            byo = { provider: wantedProvider, apiKey, model: requestedModel };
+            byo = { provider: wantedProvider, apiKey, model: requestedModel, userId };
           } catch {
             return new Response("Could not read your saved API key. Sign in again and retry.", { status: 401 });
           }

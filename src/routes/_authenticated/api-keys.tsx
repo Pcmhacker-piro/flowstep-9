@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listMyApiKeys,
+  listMyProviderUsage,
   saveMyApiKey,
   deleteMyApiKey,
   testMyApiKey,
+  type ProviderUsage,
   type StoredApiKey,
 } from "@/lib/apiKeys.functions";
 import { PROVIDER_HELP, PROVIDER_LABELS, type ProviderId } from "@/lib/providers";
@@ -46,7 +48,9 @@ function ApiKeysPage() {
   const saveFn = useServerFn(saveMyApiKey);
   const deleteFn = useServerFn(deleteMyApiKey);
   const testFn = useServerFn(testMyApiKey);
+  const usageFn = useServerFn(listMyProviderUsage);
 
+  const [usage, setUsage] = useState<ProviderUsage[] | null>(null);
   const [keys, setKeys] = useState<StoredApiKey[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rowStatus, setRowStatus] = useState<Record<string, Status>>({});
@@ -60,6 +64,11 @@ function ApiKeysPage() {
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load keys");
+    }
+    try {
+      setUsage(await usageFn());
+    } catch {
+      setUsage([]);
     }
   }
   useEffect(() => {
@@ -146,6 +155,70 @@ function ApiKeysPage() {
             {loadError}
           </div>
         ) : null}
+
+        <section className="mb-8 rounded-2xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-[15px] font-semibold text-neutral-900">Usage overview</h2>
+            <span className="text-[11px] text-neutral-500">Last 90 days · costs are estimates</span>
+          </div>
+
+          {usage === null ? (
+            <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-neutral-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading usage…
+            </p>
+          ) : usage.length === 0 ? (
+            <p className="mt-3 text-[12px] text-neutral-500">
+              No requests yet with your own keys. Generate a design with a provider model and it will show up here.
+            </p>
+          ) : (
+            <>
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-left text-[13px] tabular-nums">
+                  <thead>
+                    <tr className="border-b border-black/10 text-[11px] uppercase tracking-wide text-neutral-500">
+                      <th className="py-2 pr-3 font-medium">Provider</th>
+                      <th className="py-2 pr-3 text-right font-medium">Requests</th>
+                      <th className="py-2 pr-3 text-right font-medium">Est. cost</th>
+                      <th className="py-2 text-right font-medium">Last used</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usage.map((u) => (
+                      <tr key={u.provider} className="border-b border-black/5 last:border-0">
+                        <td className="py-2 pr-3 text-neutral-900">{u.providerLabel}</td>
+                        <td className="py-2 pr-3 text-right text-neutral-700">{u.requests}</td>
+                        <td className="py-2 pr-3 text-right text-neutral-700">
+                          ${u.estimatedCostUsd < 0.01 && u.estimatedCostUsd > 0
+                            ? u.estimatedCostUsd.toFixed(4)
+                            : u.estimatedCostUsd.toFixed(2)}
+                        </td>
+                        <td className="py-2 text-right text-neutral-500">
+                          {u.lastUsedAt ? formatRelative(u.lastUsedAt) : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-black/10 text-[12px] font-medium text-neutral-900">
+                      <td className="py-2 pr-3">Total</td>
+                      <td className="py-2 pr-3 text-right">
+                        {usage.reduce((n, u) => n + u.requests, 0)}
+                      </td>
+                      <td className="py-2 pr-3 text-right">
+                        ${usage.reduce((n, u) => n + u.estimatedCostUsd, 0).toFixed(2)}
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <p className="mt-3 text-[11px] text-neutral-500">
+                Costs are approximated from token counts at published list prices — check your provider dashboard
+                for exact billing.
+              </p>
+            </>
+          )}
+        </section>
 
         <div className="space-y-4">
           {PROVIDERS.map((provider) => {

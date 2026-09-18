@@ -40,7 +40,7 @@ STRICT RULES:
         const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
         const { streamChatWithUserKey } = await import("@/lib/providerAdapters.server");
         const { providerForDesignModel } = await import("@/lib/designModels");
-        const { keys: userKeys } = await resolveUserKeysFromRequest(request);
+        const { userId, keys: userKeys } = await resolveUserKeysFromRequest(request);
         const picked = providerForDesignModel(model);
 
         let upstream: Response;
@@ -53,6 +53,15 @@ STRICT RULES:
             model,
             systemPrompt: system,
             userPrompt: userMessage,
+          });
+          const { logProviderUsage } = await import("@/lib/usageLog.server");
+          void logProviderUsage({
+            userId,
+            provider: picked,
+            model,
+            source: "edit",
+            promptText: `${system}\n${userMessage}`,
+            outputText: snippet,
           });
         } else {
           usedProvider = "lovable";

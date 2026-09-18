@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_usage_events: {
+        Row: {
+          created_at: string
+          estimated_cost_usd: number
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          provider: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          estimated_cost_usd?: number
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          provider: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          estimated_cost_usd?: number
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          provider?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_api_keys: {
         Row: {
           created_at: string

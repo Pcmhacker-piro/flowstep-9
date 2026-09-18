@@ -44,6 +44,55 @@ export const listMyApiKeys = createServerFn({ method: "GET" })
     }));
   });
 
+export type ProviderUsage = {
+  provider: ProviderId;
+  providerLabel: string;
+  requests: number;
+  estimatedCostUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+  lastUsedAt: string | null;
+};
+
+/** Per-provider usage overview for the signed-in user (last 90 days). */
+export const listMyProviderUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ProviderUsage[]> => {
+    const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await context.supabase
+      .from("provider_usage_events")
+      .select("provider, input_tokens, output_tokens, estimated_cost_usd, created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    if (error) throw new Error(error.message);
+
+    const totals = new Map<ProviderId, ProviderUsage>();
+    for (const row of data ?? []) {
+      const provider = row.provider as ProviderId;
+      const entry =
+        totals.get(provider) ??
+        {
+          provider,
+          providerLabel: PROVIDER_LABELS[provider] ?? provider,
+          requests: 0,
+          estimatedCostUsd: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          lastUsedAt: null as string | null,
+        };
+      entry.requests += 1;
+      entry.estimatedCostUsd += Number(row.estimated_cost_usd ?? 0);
+      entry.inputTokens += row.input_tokens ?? 0;
+      entry.outputTokens += row.output_tokens ?? 0;
+      if (!entry.lastUsedAt || row.created_at > entry.lastUsedAt) entry.lastUsedAt = row.created_at;
+      totals.set(provider, entry);
+    }
+    return [...totals.values()]
+      .map((u) => ({ ...u, estimatedCostUsd: Number(u.estimatedCostUsd.toFixed(6)) }))
+      .sort((a, b) => b.requests - a.requests);
+  });
+
 export const saveMyApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => SaveInput.parse(raw))
