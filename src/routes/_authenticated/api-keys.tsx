@@ -65,6 +65,11 @@ function ApiKeysPage() {
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load keys");
     }
+    try {
+      setUsage(await usageFn());
+    } catch {
+      setUsage([]);
+    }
   }
   useEffect(() => {
     void refresh();
