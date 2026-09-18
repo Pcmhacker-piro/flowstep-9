@@ -572,7 +572,7 @@ export const Route = createFileRoute("/api/generate-image")({
         if (wantedProvider) {
           try {
             const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
-            const { keys: userKeys } = await resolveUserKeysFromRequest(request);
+            const { userId, keys: userKeys } = await resolveUserKeysFromRequest(request);
             const apiKey = userKeys[wantedProvider];
             if (!apiKey) {
               return new Response(
