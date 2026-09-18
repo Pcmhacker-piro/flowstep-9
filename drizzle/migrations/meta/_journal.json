@@ -15,6 +15,13 @@
       "when": 1789745822409,
       "tag": "0001_restore_flowstep_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789747363629,
+      "tag": "0002_create_provider_usage_events",
+      "breakpoints": true
     }
   ]
 }
