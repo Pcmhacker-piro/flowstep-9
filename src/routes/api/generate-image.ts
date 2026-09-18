@@ -580,7 +580,7 @@ export const Route = createFileRoute("/api/generate-image")({
                 { status: 400 },
               );
             }
-            byo = { provider: wantedProvider, apiKey, model: requestedModel };
+            byo = { provider: wantedProvider, apiKey, model: requestedModel, userId };
           } catch {
             return new Response("Could not read your saved API key. Sign in again and retry.", { status: 401 });
           }
