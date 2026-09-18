@@ -48,7 +48,9 @@ function ApiKeysPage() {
   const saveFn = useServerFn(saveMyApiKey);
   const deleteFn = useServerFn(deleteMyApiKey);
   const testFn = useServerFn(testMyApiKey);
+  const usageFn = useServerFn(listMyProviderUsage);
 
+  const [usage, setUsage] = useState<ProviderUsage[] | null>(null);
   const [keys, setKeys] = useState<StoredApiKey[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rowStatus, setRowStatus] = useState<Record<string, Status>>({});
