@@ -405,6 +405,18 @@ async function streamByoScreen(params: {
     if (!truncated) break;
   }
 
+  if (produced) {
+    const { logProviderUsage } = await import("@/lib/usageLog.server");
+    void logProviderUsage({
+      userId: byo.userId ?? null,
+      provider: byo.provider,
+      model: byo.model,
+      source: "design",
+      promptText: `${system}\n${userText}`,
+      outputText: produced,
+    });
+  }
+
   if (!produced) throw new Error(providerError || "Your own provider key returned no design output for this screen.");
   const validationError = validateGeneratedHtml(produced);
   if (validationError) throw new Error(validationError);
